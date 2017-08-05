@@ -117,15 +117,12 @@ ui <- shinyUI(fluidPage(
    
    #### third row: plot and data output
    fluidRow(
-       column(8,
+       column(7,
               h2("Control chart"),
               plotOutput("plot",
                          width  = 650,
                          height = 300,
-                         click  = "plotClick"),
-              selectInput("plotType", "what type of file to download for the plot",
-                          choice = c(".pdf", ".png")),
-              downloadButton("downloadPlot", "Download")
+                         click  = "plotClick")
        ),
        column(3,
               h2("Analysis for the selected time point"),
@@ -136,22 +133,31 @@ ui <- shinyUI(fluidPage(
        
    ),
    
-   
+   #### third row: plot and data output
+   fluidRow(
+       column(3,
+              selectInput("plotType", "what type of file to download for the plot",
+                          choice = c(".pdf", ".png"))
+       ),
+       column(3,
+              h1(" "),
+              downloadButton("downloadPlot", "Download")
+       )
+   ), 
    
    fluidRow(
        column(2,
               selectInput("nDiag",
                           label    = "Show the number of diagnosis codes",
                           choices  = 0:5,
-                          selected = 0)
-       ),
-       checkboxInput("poa", "Highlight POA", FALSE),
-       column(2,
+                          selected = 0),
+              checkboxInput("poa", "Highlight POA", FALSE),
               selectInput("nProc",
                           label    = "Show the number of procedure codes",
                           choices  = 0:3,
                           selected = 0)
        ),
+       
        column(3,
               h2("data source for control chart"),
               dataTableOutput("allData"),
