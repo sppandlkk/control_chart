@@ -32,8 +32,9 @@ dataUse$age <- sample(19:98, totalN, replace = TRUE)
 
 
 ### ao
-dataUse$obsAdverseOutcome <- rbinom(n = totalN, size = 1, prob = 0.2)
 dataUse$preAdverseOutcome <- runif(n = totalN, min = 0.001, max =0.4)
+dataUse$obsAdverseOutcome <- rbinom(totalN, 1, prob = dataUse$preAdverseOutcome)
+
 
 ### cost
 dataUse$obsCost <- exp(rnorm(n = totalN, mean = 9.8, sd = 1))
