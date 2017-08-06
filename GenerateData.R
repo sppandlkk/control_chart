@@ -33,12 +33,12 @@ dataUse$age <- sample(19:98, totalN, replace = TRUE)
 
 ### ao
 dataUse$preAdverseOutcome <- runif(n = totalN, min = 0.001, max =0.4)
-dataUse$obsAdverseOutcome <- rbinom(totalN, 1, prob = dataUse$preAdverseOutcome)
+dataUse$obsAdverseOutcome <- rbinom(totalN, 1, prob = exp(dataUse$preAdverseOutcome))
 
 
 ### cost
-dataUse$obsCost <- exp(rnorm(n = totalN, mean = 9.8, sd = 1))
 dataUse$preCost <- runif(n = totalN, min = 22000, max = 35000)
+dataUse$obsCost <- exp(rnorm(n = totalN, mean = 9.8, sd = 1))
 
 ### diagnosis code
 diagSource <- read.csv("./data/diag.csv")
