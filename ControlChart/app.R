@@ -1,14 +1,13 @@
 ### load packages
 library(shiny)
 library(data.table)
+library(ggplot2)
+library(RCurl)
 
 ### read in data
-setwd("/Users/sppandlkk/GitHub/control_chart/")
-dataUse <- read.table("./data/episode_data.csv",
-                      header = TRUE,
-                      check = FALSE,
-                      sep = ",",
-                      stringsAsFactors = FALSE)
+link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
+dataUse <- read.csv(url(link))
+
 ### deal with data
 dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
 
