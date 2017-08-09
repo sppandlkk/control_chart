@@ -3,10 +3,12 @@ library(shiny)
 library(data.table)
 library(ggplot2)
 library(RCurl)
+library(DT)
 
 ### read in data
 link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
-dataUse <- read.csv(url(link))
+#dataUse <- read.csv(url(link))
+dataUse <- read.csv("../data/episode_data.csv")
 
 ### deal with data
 dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
@@ -92,7 +94,7 @@ ui <- shinyUI(fluidPage(
               selectInput("p2_year",
                           label    = "Phase II start year",
                           choices  = c(2016, 2017),
-                          selected = 2017)
+                          selected = 2016)
        ),
        
        column(2,
@@ -110,7 +112,7 @@ ui <- shinyUI(fluidPage(
                                        "October"   = "10",
                                        "November"  = "11",
                                        "December"  = "12"),
-                          selected = "01")
+                          selected = "07")
        )
    ),
    
@@ -182,7 +184,6 @@ server <- shinyServer(function(input, output) {
             dataRes <- dataRes[dataRes$physID == as.character(input$physId), ]
         }
         
-        
         ### roll up cases by year month
         ### first create the year month field
         dataRes$yearMonth <- format(dataRes$procDate, "%Y%m")
@@ -198,8 +199,6 @@ server <- shinyServer(function(input, output) {
         ### set O=E
         dataRes$preAdverseOutcome <- dataRes$preAdverseOutcome * (avgAdverseOutcome/ mean(dataRes$preAdverseOutcome))
         dataRes$preCost <- dataRes$preCost * (avgCost/ mean(dataRes$preCost))
-        
-        
         
         ### aggregate by yearmonth
         dataTable <- data.table(dataRes[, c("yearMonth", 
@@ -222,10 +221,8 @@ server <- shinyServer(function(input, output) {
                     dataRes = dataRes))
     })
         
-        
-    
-    
-   output$plot <- renderPlot({
+    ### plot XMR chart
+    output$plot <- renderPlot({
        
         dataAgg <- CreateData()[["dataAgg"]] 
         ### create phase I flag
@@ -237,21 +234,22 @@ server <- shinyServer(function(input, output) {
 
    })
    
-   output$downloadPlot <- downloadHandler(
-       filename = function() {
-           physDesc <- ""
-           if (input$physId != "All") {
-               physDesc <- paste(" ", input$physId)
-           }
-           paste0(input$type,
-                  " Control Chart for ",
-                  input$hospId,
-                  physDesc,
-                  "  ( group ",
-                  input$grpIdx,
-                  " )",
-                  input$plotType)
-           },
+    ### add a download function
+    output$downloadPlot <- downloadHandler(
+        filename = function() {
+            physDesc <- ""
+            if (input$physId != "All") {
+                physDesc <- paste(" ", input$physId)
+            }
+            paste0(input$type,
+                 " Control Chart for ",
+                 input$hospId,
+                 physDesc,
+                 "  ( group ",
+                 input$grpIdx,
+                 " )",
+                 input$plotType)
+            },
        
        content = function(file){
            
@@ -292,7 +290,7 @@ server <- shinyServer(function(input, output) {
            
            return()           
            #### if click too far from points, return nothing
-       } else if (min(comDist) > 7) {
+       } else if (min(comDist) > 10) {
            
            return()           
        ### if user picks one point then do the follow up plot
@@ -301,55 +299,22 @@ server <- shinyServer(function(input, output) {
            selectYearMonth   <- dataAgg[selectIndex, "yearMonth"]
            out    <- dataRes[ (dataRes[, "yearMonth"] == selectYearMonth), ]
            
-           # Generate plot for ao
+           ### Generate plot for ao
            if (as.character(input$type) == "RAAdverseOutcome") {
                p <- ggplot(out, aes(procDate, preAdverseOutcome))    
                p <- p + geom_point(aes(shape  = factor(obsAdverseOutcome),
                                        colour = factor(physID)), size=4)
+           ### Generate plot for cost
            } else {
                p <- ggplot(out, aes(procDate, obsCost))    
                p <- p + geom_point(aes(
                                        colour = factor(physID)), size=4)
            }
            return(p)
-           
-       }
-       
-       
-       #### At start when no selection, output everything
-       if ((is.null(input$plot_click$x))) {
-           
-           #### Output all data, if click too far from points
-       } else if (min((data_source[, 1] - input$plot_click$x)^2) > 0.25) {
-           return()
-       } else {
-           select_index <- which.min((data_source[,1] - input$plot_click$x)^2)
-           select_eid   <- data_source[ select_index, "roll_up_eid"]
-           final_out    <- data_raw[ (data_raw$roll_up_eid == select_eid) ,]
-           final_out[, !names(final_out) == "roll_up_eid"]
-           
-           cat_type <- rep(" Routine", nrow(final_out))
-           cat_type[as.logical(final_out[, input$dpdt_var])] <- "Adverse Event"
-           
-           data_for_bx <- data.frame(
-               pred_ao_rate   = final_out[, paste("p_", input$dpdt_var, sep="")],
-               cat_type       = cat_type,
-               phys           = final_out[, "surg_phys_1"],
-               procedure_date = final_out[, "PROCEDURE_DATE"])
-           
-           # Generate plot
-           p <- ggplot(data_for_bx, aes(procedure_date, pred_ao_rate))
-           p <- p + geom_point(aes(shape  = factor(cat_type),
-                                   colour = factor(phys)), size=4)
-           p
-           
        }
    })
    
-   
-   
-   
-   
+
    #### output the data to the shiny panel
    prepareData <- reactive({
        dataRes <- CreateData()[["dataRes"]] 
@@ -360,6 +325,7 @@ server <- shinyServer(function(input, output) {
        
        if (input$nDiag != 0) {
            finalOut <- c(finalOut, paste0("diag_", 1:as.numeric(input$nDiag) ))
+           finalOut <- c(finalOut, paste0("poa_", 1:as.numeric(input$nDiag) ))
        }
        
        if (input$nProc != 0) {
@@ -377,7 +343,7 @@ server <- shinyServer(function(input, output) {
            out <- dataRes[, finalOut]
            
        #### Output all data, if click too far from points
-       } else if (min(comDist) > 7) {
+       } else if (min(comDist) > 10) {
            
            out <- dataRes[, finalOut]
            
@@ -388,9 +354,7 @@ server <- shinyServer(function(input, output) {
            out    <- dataRes[ (dataRes[, "yearMonth"] == selectYearMonth), finalOut]
            
        }
-       
        return(out)
-
    })
    
    #### output the data to the shiny panel
@@ -421,8 +385,6 @@ server <- shinyServer(function(input, output) {
                        row.names = FALSE
            )}
    )
-   
-   
 })
 
 ### Define function for xmr chart

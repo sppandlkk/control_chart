@@ -32,7 +32,7 @@ dataUse$age <- sample(19:98, totalN, replace = TRUE)
 
 
 ### ao
-dataUse$preAdverseOutcome <- runif(n = totalN, min = 0.001, max =0.4)
+dataUse$preAdverseOutcome <- (runif(n = totalN, min = 0.001, max =0.4))^1.5 / (0.4^1.5)
 dataUse$obsAdverseOutcome <- rbinom(totalN, 1, prob = dataUse$preAdverseOutcome)
 
 
