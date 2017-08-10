@@ -16,6 +16,19 @@ dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
 ### sort by procedure data
 dataUse <- dataUse[order(dataUse$procDate), ]
 
+### parameter setting
+grp <- "grp"
+hospID <- "hospID"
+physID <- "physID"
+procDate <- "procDate"
+obsAdverseOutcome <- "obsAdverseOutcome"
+preAdverseOutcome <- "preAdverseOutcome"
+obsCost <- "obsCost"
+preCost <- "preCost"
+DIAG_PFX <- "diag_"
+POA_PFX <- "poa_"
+PROC_PFX <- "proc_"
+
 
 # Define UI for application that draws a histogram
 ui <- shinyUI(fluidPage(
@@ -152,7 +165,7 @@ ui <- shinyUI(fluidPage(
                           label    = "Show the number of diagnosis codes",
                           choices  = 0:5,
                           selected = 0),
-              checkboxInput("poa", "Highlight POA", FALSE),
+              checkboxInput("showPoa", "Highlight POA", FALSE),
               selectInput("nProc",
                           label    = "Show the number of procedure codes",
                           choices  = 0:3,
@@ -176,36 +189,36 @@ server <- shinyServer(function(input, output) {
     CreateData <- reactive({
         
         ### restrict to group and hosp
-        dataRes <- dataUse[dataUse$grp == input$grpIdx &
-                           dataUse$hospID == as.character(input$hospId), ]
+        dataRes <- dataUse[dataUse[, grp] == input$grpIdx &
+                           dataUse[, hospID] == as.character(input$hospId), ]
         
         ### apply physician restriction if not "all"
         if (input$physId != "All") {
-            dataRes <- dataRes[dataRes$physID == as.character(input$physId), ]
+            dataRes <- dataRes[dataRes[, physID] == as.character(input$physId), ]
         }
         
         ### roll up cases by year month
         ### first create the year month field
-        dataRes$yearMonth <- format(dataRes$procDate, "%Y%m")
+        dataRes$yearMonth <- format(dataRes[, procDate], "%Y%m")
         
         ### restrict on phase I
         dataRes <- dataRes[as.numeric(dataRes$yearMonth) >= 
                            as.numeric(paste0(input$p1_year, input$p1_month)), ]
         
         ### compute the avg rate and cost
-        avgAdverseOutcome <- mean(dataRes$obsAdverseOutcome)
-        avgCost <- mean(dataRes$obsCost)
+        avgAdverseOutcome <- mean(dataRes[, obsAdverseOutcome])
+        avgCost <- mean(dataRes[, obsCost])
         
         ### set O=E
-        dataRes$preAdverseOutcome <- dataRes$preAdverseOutcome * (avgAdverseOutcome/ mean(dataRes$preAdverseOutcome))
-        dataRes$preCost <- dataRes$preCost * (avgCost/ mean(dataRes$preCost))
+        dataRes[, preAdverseOutcome] <- dataRes[, preAdverseOutcome] * (avgAdverseOutcome/ mean(dataRes[, preAdverseOutcome]))
+        dataRes[, preCost] <- dataRes[, preCost] * (avgCost/ mean(dataRes[, preCost]))
         
         ### aggregate by yearmonth
         dataTable <- data.table(dataRes[, c("yearMonth", 
-                                            "obsAdverseOutcome", 
-                                            "preAdverseOutcome",
-                                            "obsCost",
-                                            "preCost")])
+                                            obsAdverseOutcome, 
+                                            preAdverseOutcome,
+                                            obsCost,
+                                            preCost)])
         
         dataAgg <- dataTable[, lapply(.SD, sum), by = "yearMonth"]
         dataAgg <- as.data.frame(dataAgg)
@@ -214,8 +227,8 @@ server <- shinyServer(function(input, output) {
         dataAgg$newDate <- as.Date(paste0(dataAgg[, "yearMonth"], "01"), "%Y%m%d")
         
         ### risk adjust
-        dataAgg$RAAdverseOutcome <- (dataAgg$obsAdverseOutcome/dataAgg$preAdverseOutcome) *avgAdverseOutcome
-        dataAgg$RACost <- (dataAgg$obsCost/dataAgg$preCost) * avgCost
+        dataAgg$RAAdverseOutcome <- (dataAgg[, obsAdverseOutcome]/dataAgg[, preAdverseOutcome]) *avgAdverseOutcome
+        dataAgg$RACost <- (dataAgg[, obsCost]/dataAgg[, preCost]) * avgCost
         
         return(list(dataAgg = dataAgg,
                     dataRes = dataRes))
@@ -275,61 +288,75 @@ server <- shinyServer(function(input, output) {
        }
    )
    
-   #### C) follow_up analysis
-   output$followUpPlot <- renderPlot({
+    #### C) follow_up analysis
+    output$followUpPlot <- renderPlot({
        
-       dataRes <- CreateData()[["dataRes"]] 
-       dataAgg <- CreateData()[["dataAgg"]]
+        dataRes <- CreateData()[["dataRes"]] 
+        dataAgg <- CreateData()[["dataAgg"]]
        
-       ### now we need to add a function to let user pick the point
-       ### compute the distance
-       comDist <- abs(as.numeric(dataAgg[, "newDate"]) - (input$plotClick$x - 15) ) 
+        ### now we need to add a function to let user pick the point
+        ### compute the distance
+        comDist <- abs(as.numeric(dataAgg[, "newDate"]) - (input$plotClick$x - 15) ) 
        
-       ### initialize to no follow up plot
-       if ((is.null(input$plotClick$x))) {
+        ### initialize to no follow up plot
+        if ((is.null(input$plotClick$x))) {
            
-           return()           
-           #### if click too far from points, return nothing
-       } else if (min(comDist) > 10) {
+            return()           
+            #### if click too far from points, return nothing
+        } else if (min(comDist) > 10) {
            
-           return()           
-       ### if user picks one point then do the follow up plot
-       } else {
-           selectIndex <- which.min(comDist)
-           selectYearMonth   <- dataAgg[selectIndex, "yearMonth"]
-           out    <- dataRes[ (dataRes[, "yearMonth"] == selectYearMonth), ]
+            return()           
+        ### if user picks one point then do the follow up plot
+        } else {
+            selectIndex <- which.min(comDist)
+            selectYearMonth   <- dataAgg[selectIndex, "yearMonth"]
+            out    <- dataRes[ (dataRes[, "yearMonth"] == selectYearMonth), ]
            
-           ### Generate plot for ao
-           if (as.character(input$type) == "RAAdverseOutcome") {
-               p <- ggplot(out, aes(procDate, preAdverseOutcome))    
-               p <- p + geom_point(aes(shape  = factor(obsAdverseOutcome),
-                                       colour = factor(physID)), size=4)
-           ### Generate plot for cost
-           } else {
-               p <- ggplot(out, aes(procDate, obsCost))    
-               p <- p + geom_point(aes(
-                                       colour = factor(physID)), size=4)
-           }
-           return(p)
-       }
-   })
+            ### Generate plot for ao
+            if (as.character(input$type) == "RAAdverseOutcome") {
+                ### name variable for ggplot
+                out$obsAdverseOutcome <- out[, obsAdverseOutcome]
+                out$physID <- out[, physID]
+                
+                p <- ggplot(out, aes(procDate, preAdverseOutcome))    
+                p <- p + geom_point(aes(shape  = factor(obsAdverseOutcome),
+                                        colour = factor(physID)), size=4)
+            ### Generate plot for cost
+            } else {
+                ### name variable for ggplot
+                out$obsCost <- out[, obsCost]
+                out$physID <- out[, physID]
+                
+                p <- ggplot(out, aes(procDate, obsCost))    
+                p <- p + geom_point(aes(colour = factor(physID)), size=4)
+            }
+            return(p)
+        }
+    })
    
 
    #### output the data to the shiny panel
    prepareData <- reactive({
+       ### first call CreateData
        dataRes <- CreateData()[["dataRes"]] 
        dataAgg <- CreateData()[["dataAgg"]] 
        
        ### decide which field to keep
-       finalOut <- colnames(dataRes)[c(2, 4:11)]
+       finalOut <- c("grp", 
+                     physID, 
+                     procDate,
+                     obsAdverseOutcome,
+                     preAdverseOutcome,
+                     obsCost,
+                     preCost)
        
        if (input$nDiag != 0) {
-           finalOut <- c(finalOut, paste0("diag_", 1:as.numeric(input$nDiag) ))
-           finalOut <- c(finalOut, paste0("poa_", 1:as.numeric(input$nDiag) ))
+           finalOut <- c(finalOut, paste0(DIAG_PFX, 1:as.numeric(input$nDiag) ))
+           finalOut <- c(finalOut, paste0(POA_PFX, 1:as.numeric(input$nDiag) ))
        }
        
        if (input$nProc != 0) {
-           finalOut <- c(finalOut, paste0("proc_", 1:as.numeric(input$nProc) ))
+           finalOut <- c(finalOut, paste0(PROC_PFX, 1:as.numeric(input$nProc) ))
        }
        
        ### now we need to add a function to let user pick the point
@@ -359,39 +386,94 @@ server <- shinyServer(function(input, output) {
    
    #### output the data to the shiny panel
    output$allData <- renderDataTable({
-       prepareData()
-   })
+       
+        showTable <- prepareData()
+       
+        ### showing 50 records as default
+        options(DT.options = list(pageLength = 50))
+       
+        ### create initial table
+        iniTable <- datatable(showTable, 
+                              rownames = FALSE, 
+                              filter = "top"
+        ) %>% formatCurrency(c(obsCost, preCost), digit = 0
+        ) %>% formatRound(c(preAdverseOutcome), digit = 3
+        )
+       
+        ### if show poa is selected, the highlight the POA information 
+        if (input$showPoa) {
+            ### if only the first diag is shown, then highlight everything
+            ### principal diag is always POA
+            if (as.numeric(input$nDiag) == 1) {
+                outTable <- iniTable %>% formatStyle(paste0(DIAG_PFX, 1), 
+                                                     backgroundColor = "yellow")
+               
+                ### if more than 1 diag are shown, highlight the principal as is
+                ### after the second diag, use the POA inforamtion
+            } else if (as.numeric(input$nDiag) >= 2) {
+               
+                ### find out the location for poa columns
+                poaField <- grep(POA_PFX, names(showTable))
+               
+                ### if user wants to highlight, then drop POA columns
+                iniTable <- datatable(showTable, 
+                                      rownames = FALSE,
+                                      filter = "top",
+                                      options = list(columnDefs = list(list(visible = FALSE,
+                                                                            ### because I am not showing rownames so I need to subtract by 1
+                                                                            targets = poaField - 1 ))))
+               
+                outTable <- iniTable %>% formatCurrency(c(obsCost, preCost), digit = 0
+                                   ) %>% formatRound(c(preAdverseOutcome), digit = 3
+                                    
+                                   ### highlight all principcal
+                                   ) %>% formatStyle(paste0(DIAG_PFX, 1), backgroundColor = "yellow"
+                                   ### highlight secondary based on POA
+                                   ) %>% formatStyle(paste0(DIAG_PFX, 2:as.numeric(input$nDiag)),
+                                                     paste0(POA_PFX,  2:as.numeric(input$nDiag)),
+                                                     backgroundColor = styleEqual(c(0, 1), 
+                                                     c("white", "yellow"))
+                                   )
+            }
+            ### if user is not interested in poa, then show the regular table
+        } else {
+            outTable <- iniTable
+        }
+       
+        return(outTable)
+    })
+   
+    
 
-   #### add a download function for user to download the table
-   output$downloadTable <- downloadHandler(
-       filename = function(){
-           physDesc <- ""
-           if (input$physId != "All") {
-               physDesc <- paste(" ", input$physId)
-           }
-           paste0(input$type,
-                  " Report for ",
-                  input$hospId,
-                  physDesc,
-                  "  ( group ",
-                  input$grpIdx,
-                  " )",
-                  input$tableType)
-           },
-       content = function(file){
-           write.table(prepareData(),
-                       file,
-                       sep = ",",
-                       row.names = FALSE
-           )}
-   )
+    #### add a download function for user to download the table
+    output$downloadTable <- downloadHandler(
+        filename = function() {
+            physDesc <- ""
+            if (input$physId != "All") {
+                physDesc <- paste(" ", input$physId)
+            }
+            paste0(input$type,
+                   " Report for ",
+                   input$hospId,
+                   physDesc,
+                   "  ( group ",
+                   input$grpIdx,
+                   " )",
+                   input$tableType)
+            },
+        content = function(file) {
+            write.table(prepareData(),
+                        file,
+                        sep = ",",
+                        row.names = FALSE
+            )}
+    )
 })
 
 ### Define function for xmr chart
 PlotXmrControlChart <- function(dataIn,
                                 phaseI,
-                                var
-                                ) {
+                                var) {
     
     ### restrict to phaseI
     dataPhaseI <- dataIn[dataIn[, phaseI], ]
