@@ -401,7 +401,7 @@ server <- shinyServer(function(input, output) {
         )
        
         ### if show poa is selected, the highlight the POA information 
-        if (input$showPoa) {
+        if (input$showPoa & input$nDiag >= 1) {
             ### if only the first diag is shown, then highlight everything
             ### principal diag is always POA
             if (as.numeric(input$nDiag) == 1) {
