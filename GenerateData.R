@@ -48,7 +48,7 @@ nDiag <- 5
 for(i in 1:nDiag) {
     dataUse[, paste0("diag_", i)] <- sample(listOfDiag, totalN, replace = TRUE)
     ### alone with POA information
-    dataUse[, paste0("poa_", i)] <- sample(0:1, totalN, replace = TRUE)
+    dataUse[, paste0("poa_", i)] <- sample(0:1, totalN, prob = c(0.3, 0.7), replace = TRUE)
 }
 ### first diag code is always POA
 dataUse[, "poa_1"] <- 1

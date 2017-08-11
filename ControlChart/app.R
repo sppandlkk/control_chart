@@ -6,9 +6,9 @@ library(RCurl)
 library(DT)
 
 ### read in data
-link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
-dataUse <- read.csv(url(link))
-
+#link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
+#dataUse <- read.csv(url(link))
+dataUse <- read.csv("../data/episode_data.csv")
 
 ### deal with data
 dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
@@ -165,7 +165,7 @@ ui <- shinyUI(fluidPage(
                           label    = "Show the number of diagnosis codes",
                           choices  = 0:5,
                           selected = 0),
-              checkboxInput("showPoa", "Highlight POA", FALSE),
+              checkboxInput("showPoa", "Highlight non-POA", FALSE),
               selectInput("nProc",
                           label    = "Show the number of procedure codes",
                           choices  = 0:3,
@@ -400,16 +400,16 @@ server <- shinyServer(function(input, output) {
         ) %>% formatRound(c(preAdverseOutcome), digit = 3
         )
        
-        ### if show poa is selected, the highlight the POA information 
+        ### if showPoa is selected, the highlight the non-POA information 
         if (input$showPoa & input$nDiag >= 1) {
-            ### if only the first diag is shown, then highlight everything
+            
+            ### if only the first diag is shown, then no need to do anything
             ### principal diag is always POA
             if (as.numeric(input$nDiag) == 1) {
-                outTable <- iniTable %>% formatStyle(paste0(DIAG_PFX, 1), 
-                                                     backgroundColor = "yellow")
+                outTable <- iniTable
                
-                ### if more than 1 diag are shown, highlight the principal as is
-                ### after the second diag, use the POA inforamtion
+                ### if more than 1 diag are shown, highlight the secondary when
+                ### poa is 0
             } else if (as.numeric(input$nDiag) >= 2) {
                
                 ### find out the location for poa columns
@@ -425,14 +425,11 @@ server <- shinyServer(function(input, output) {
                
                 outTable <- iniTable %>% formatCurrency(c(obsCost, preCost), digit = 0
                                    ) %>% formatRound(c(preAdverseOutcome), digit = 3
-                                    
-                                   ### highlight all principcal
-                                   ) %>% formatStyle(paste0(DIAG_PFX, 1), backgroundColor = "yellow"
-                                   ### highlight secondary based on POA
+                                   ### highlight secondary based on POA = 0
                                    ) %>% formatStyle(paste0(DIAG_PFX, 2:as.numeric(input$nDiag)),
                                                      paste0(POA_PFX,  2:as.numeric(input$nDiag)),
                                                      backgroundColor = styleEqual(c(0, 1), 
-                                                     c("white", "yellow"))
+                                                     c("yellow", "white"))
                                    )
             }
             ### if user is not interested in poa, then show the regular table
