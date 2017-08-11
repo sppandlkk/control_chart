@@ -6,9 +6,10 @@ library(RCurl)
 library(DT)
 
 ### read in data
-#link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
-#dataUse <- read.csv(url(link))
-dataUse <- read.csv("../data/episode_data.csv")
+link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
+dataUse <- read.csv(url(link))
+### or use local version
+#dataUse <- read.csv("../data/episode_data.csv")
 
 ### deal with data
 dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
