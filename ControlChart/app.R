@@ -166,7 +166,7 @@ ui <- shinyUI(fluidPage(
                           label    = "Show the number of diagnosis codes",
                           choices  = 0:5,
                           selected = 0),
-              checkboxInput("showPoa", "Highlight non-POA", FALSE),
+              checkboxInput("showNonPoa", "Highlight non-POA", FALSE),
               selectInput("nProc",
                           label    = "Show the number of procedure codes",
                           choices  = 0:3,
@@ -402,7 +402,7 @@ server <- shinyServer(function(input, output) {
         )
        
         ### if showPoa is selected, the highlight the non-POA information 
-        if (input$showPoa & input$nDiag >= 1) {
+        if (input$showNonPoa & input$nDiag >= 1) {
             
             ### if only the first diag is shown, then no need to do anything
             ### principal diag is always POA
