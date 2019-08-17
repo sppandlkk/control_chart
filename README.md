@@ -1,6 +1,6 @@
 # Control Chart for Hospital Performance
 
-Demonstration: https://sppandlkk.shinyapps.io/XMR_control_chart_for_efficiency_and_effectiveness/.
+Demonstration: https://sppandlkk.shinyapps.io/XMRControlChart/.
 
 ## Introduction
 This is an application that can help hospitals monitor their performance. It tracks two things: adverse outcome and cost, which people usualy refer as effectiveness and efficiency. Outcomes or costs are rolled up by month and then get plotted together sequencially. Control limits are set up using 3-sigma to identify outlier. Case level information are also provided at the end with the option to include diagnosis and procedure codes.
