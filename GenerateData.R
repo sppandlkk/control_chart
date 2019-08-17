@@ -3,7 +3,7 @@ set.seed(1234)
 ### initial parameters
 nGroup <- 3
 nFac <- 4
-nPhy <- 3
+nPhy <- 5
 nEpisode <- 300
 
 
@@ -23,8 +23,8 @@ dataUse <- do.call(rbind, lapply(1:nGroup, function(grp) {
 totalN <- nrow(dataUse)
 
 ### add the procedure date
-startDate <- as.Date("2015/01/01", "%Y/%m/%d") 
-dataUse$procDate <- startDate + round(runif(totalN, min = 0, max = 850))
+startDate <- as.Date("2016/01/01", "%Y/%m/%d") 
+dataUse$procDate <- startDate + round(runif(totalN, min = 0, max = 1090))
 
 ### Gender AGE
 dataUse$gender <- sample(c("M", "F"), totalN, replace = TRUE)

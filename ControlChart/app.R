@@ -7,9 +7,9 @@ library(DT)
 
 ### read in data
 link <- "https://raw.githubusercontent.com/sppandlkk/control_chart/master/data/episode_data.csv"
-dataUse <- read.csv(url(link))
+#dataUse <- read.csv(url(link))
 ### or use local version
-#dataUse <- read.csv("../data/episode_data.csv")
+dataUse <- read.csv("../data/episode_data.csv")
 
 ### deal with data
 dataUse$procDate <- as.Date(dataUse$procDate, "%Y-%m-%d")
@@ -64,7 +64,9 @@ ui <- shinyUI(fluidPage(
                           choices  = c("All"    = "All",
                                        "Phys_A" = "Phys_A",  
                                        "Phys_B" = "Phys_B",
-                                       "Phys_C" = "Phys_C"
+                                       "Phys_C" = "Phys_C",
+                                       "Phys_D" = "Phys_D",
+                                       "Phys_E" = "Phys_E"
                           ),
                           selected = "All")
        ),
@@ -82,8 +84,8 @@ ui <- shinyUI(fluidPage(
        column(2,
               selectInput("p1_year", 
                           label    = "Phase I start year",
-                          choices  = c(2015:2017), 
-                          selected = 2015)
+                          choices  = c(2016:2018), 
+                          selected = 2016)
        ),
        
        column(2,
@@ -107,8 +109,8 @@ ui <- shinyUI(fluidPage(
        column(2,
               selectInput("p2_year",
                           label    = "Phase II start year",
-                          choices  = c(2016, 2017),
-                          selected = 2016)
+                          choices  = c(2017, 2018),
+                          selected = 2017)
        ),
        
        column(2,
