@@ -480,7 +480,7 @@ PlotXmrControlChart <- function(dataIn,
     center <- mean(dataPhaseI[, var])
     movingRange <- diff(dataPhaseI[, var])
     movingAverage <- mean(abs(movingRange))
-    UCL <- center + (1.66) * movingAverage
+    UCL <- center + (2.66) * movingAverage
     LCL <- center - (2.66) * movingAverage
     
     ### guess the range of y-axis
